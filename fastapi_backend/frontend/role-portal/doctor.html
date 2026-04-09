@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Doctor Dashboard</title>
+  <link rel="stylesheet" href="./shared.css" />
+</head>
+<body>
+  <div class="shell">
+    <div class="topbar">
+      <h2>Doctor Workspace</h2>
+      <div>
+        <span id="roleBadge" class="role-badge"></span>
+        <button id="logoutBtn" class="logout-btn">Logout</button>
+      </div>
+    </div>
+    <div class="grid">
+      <section class="card">
+        <h3>Patient Records</h3>
+        <input id="patientId" placeholder="Patient UUID" />
+        <button id="loadPatient" class="primary">Load</button>
+        <pre id="patientOut" class="muted"></pre>
+      </section>
+      <section class="card">
+        <h3>AI Summary</h3>
+        <button id="aiBtn" class="primary">Summarise Patient</button>
+        <pre id="aiOut" class="muted"></pre>
+      </section>
+      <section class="card" style="grid-column: 1 / -1;">
+        <h3>Visit Timeline</h3>
+        <pre id="timelineOut" class="muted"></pre>
+      </section>
+    </div>
+  </div>
+  <script src="./shared.js"></script>
+  <script>
+    (async function () {
+      const { api, verifyAuthOrRedirect, wireHeader } = window.RolePortal;
+      const auth = await verifyAuthOrRedirect("doctor");
+      if (!auth) return;
+      wireHeader("Doctor");
+
+      async function loadPatientData() {
+        const pid = document.getElementById("patientId").value.trim();
+        if (!pid) return;
+        try {
+          const p = await (await api(`/patients/${pid}`)).json();
+          document.getElementById("patientOut").textContent = JSON.stringify(p, null, 2);
+          const t = await (await api(`/patients/${pid}/timeline`)).json();
+          document.getElementById("timelineOut").textContent = JSON.stringify(t, null, 2);
+        } catch (e) {
+          document.getElementById("patientOut").textContent = e.message;
+        }
+      }
+
+      document.getElementById("loadPatient").addEventListener("click", loadPatientData);
+      document.getElementById("aiBtn").addEventListener("click", async () => {
+        const pid = document.getElementById("patientId").value.trim();
+        if (!pid) return;
+        try {
+          const r = await fetch(`http://127.0.0.1:8000/ai/summarise/${pid}`, { headers: { Authorization: `Bearer ${localStorage.getItem("access_token") || ""}` } });
+          const out = r.ok ? await r.text() : `HTTP ${r.status}`;
+          document.getElementById("aiOut").textContent = out;
+        } catch (e) {
+          document.getElementById("aiOut").textContent = e.message;
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

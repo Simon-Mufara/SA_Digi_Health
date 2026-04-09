@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.venv/
+venv/
+
+# Node / Next
+nextjs-frontend/node_modules/
+nextjs-frontend/.next/
+nextjs-frontend/out/
+
+# Logs and env
+*.log
+.env
+.env.*
+
+# OS/editor
+.DS_Store
+Thumbs.db
+.vscode/
+
+# ML artifacts and temp data
+*.pt
+*.pth
+*.onnx
+*.h5
+*.ckpt

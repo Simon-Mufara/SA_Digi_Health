@@ -1,0 +1,108 @@
+:root {
+  --bg: #060d1a;
+  --surface: #0e1730;
+  --surface-2: #121f3f;
+  --text: #e6eefc;
+  --muted: #92a6c7;
+  --accent: #10d3c5;
+  --danger: #ef4444;
+  --ok: #22c55e;
+  --border: #20345d;
+  --shadow: 0 12px 28px rgba(0, 0, 0, 0.35);
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: Inter, Segoe UI, Arial, sans-serif;
+  background: radial-gradient(circle at 20% 0%, #0d1e3d 0%, var(--bg) 50%);
+  color: var(--text);
+}
+
+.shell {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1.2rem;
+}
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  border: 1px solid var(--border);
+  background: rgba(14, 23, 48, 0.92);
+  border-radius: 14px;
+  padding: 0.8rem 1rem;
+  box-shadow: var(--shadow);
+}
+
+.role-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  padding: 0.25rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.logout-btn, button {
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  border-radius: 10px;
+  padding: 0.52rem 0.75rem;
+  cursor: pointer;
+}
+
+button.primary { border-color: var(--accent); color: var(--accent); }
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.9rem;
+}
+
+.card {
+  border: 1px solid var(--border);
+  background: rgba(14, 23, 48, 0.95);
+  border-radius: 14px;
+  padding: 0.85rem;
+  box-shadow: var(--shadow);
+}
+
+.card h3 { margin: 0 0 0.6rem; color: var(--accent); }
+.muted { color: var(--muted); }
+.error { color: var(--danger); }
+.ok { color: var(--ok); }
+
+input, select, textarea {
+  width: 100%;
+  margin: 0.35rem 0 0.65rem;
+  border: 1px solid var(--border);
+  background: #0a1226;
+  color: var(--text);
+  border-radius: 8px;
+  padding: 0.55rem;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.92rem;
+}
+th, td {
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  padding: 0.48rem;
+}
+
+@media (max-width: 900px) {
+  .grid { grid-template-columns: 1fr; }
+}

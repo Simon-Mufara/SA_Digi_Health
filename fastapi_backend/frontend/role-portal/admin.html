@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Workspace</title>
+  <link rel="stylesheet" href="./shared.css" />
+</head>
+<body>
+  <div class="shell">
+    <div class="topbar">
+      <h2>Admin Workspace</h2>
+      <div>
+        <span id="roleBadge" class="role-badge"></span>
+        <button id="logoutBtn" class="logout-btn">Logout</button>
+      </div>
+    </div>
+    <div class="grid">
+      <section class="card">
+        <h3>Staff CRUD / Role Assignment</h3>
+        <input id="staffId" placeholder="Staff ID" />
+        <input id="staffPass" placeholder="Password" />
+        <select id="staffRole">
+          <option>doctor</option><option>clinician</option><option>admin</option>
+          <option>security_officer</option><option>researcher</option>
+        </select>
+        <button id="createStaff" class="primary">Create Staff</button>
+        <pre id="staffOut" class="muted"></pre>
+      </section>
+      <section class="card">
+        <h3>Audit Log Viewer</h3>
+        <button id="loadAudit" class="primary">Load Audit Events</button>
+        <pre id="auditOut" class="muted"></pre>
+      </section>
+    </div>
+  </div>
+  <script src="./shared.js"></script>
+  <script>
+    (async function () {
+      const { api, verifyAuthOrRedirect, wireHeader } = window.RolePortal;
+      const auth = await verifyAuthOrRedirect("admin");
+      if (!auth) return;
+      wireHeader("Admin");
+
+      document.getElementById("createStaff").addEventListener("click", async () => {
+        try {
+          const payload = {
+            staff_id: document.getElementById("staffId").value.trim(),
+            password: document.getElementById("staffPass").value,
+            role: document.getElementById("staffRole").value
+          };
+          const res = await api("/auth/register", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+          });
+          document.getElementById("staffOut").textContent = JSON.stringify(await res.json(), null, 2);
+        } catch (e) {
+          document.getElementById("staffOut").textContent = e.message;
+        }
+      });
+
+      document.getElementById("loadAudit").addEventListener("click", async () => {
+        try {
+          const res = await api("/face-recognition/events");
+          document.getElementById("auditOut").textContent = JSON.stringify(await res.json(), null, 2);
+        } catch (e) {
+          document.getElementById("auditOut").textContent = e.message;
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,29 @@
+{
+  "name": "yara-dashboard",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "powershell -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\start-dev.ps1",
+    "build": "set NODE_OPTIONS=--max-old-space-size=6144&& set NEXT_DISABLE_SWC_WORKER=1&& set NEXT_PRIVATE_BUILD_WORKER=1&& set CI=1&& next build --no-lint",
+    "start": "set NODE_OPTIONS=--max-old-space-size=4096&& next start -p 3100",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "jose": "^5.2.0",
+    "next": "14.2.0",
+    "qrcode.react": "^3.1.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "recharts": "^2.12.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.2.2",
+    "@types/node": "^20.0.0",
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "autoprefixer": "^10.4.27",
+    "postcss": "^8.5.9",
+    "tailwindcss": "^4.2.2",
+    "typescript": "^5.0.0"
+  }
+}

@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Security Workspace</title>
+  <link rel="stylesheet" href="./shared.css" />
+</head>
+<body>
+  <div class="shell">
+    <div class="topbar">
+      <h2>Security Workspace</h2>
+      <div>
+        <span id="roleBadge" class="role-badge"></span>
+        <button id="logoutBtn" class="logout-btn">Logout</button>
+      </div>
+    </div>
+    <div class="grid">
+      <section class="card">
+        <h3>Live Access Event Stream</h3>
+        <p class="muted">WebSocket: <code>ws://127.0.0.1:8000/ws/access-events</code></p>
+        <pre id="streamOut" class="muted"></pre>
+      </section>
+      <section class="card">
+        <h3>Failed Auth Log</h3>
+        <button id="failedBtn" class="primary">Load Failed Auth</button>
+        <pre id="failedOut" class="muted"></pre>
+      </section>
+      <section class="card" style="grid-column: 1 / -1;">
+        <h3>Export Controls</h3>
+        <button id="exportEvents" class="primary">Export Access Events CSV</button>
+      </section>
+    </div>
+  </div>
+  <script src="./shared.js"></script>
+  <script>
+    (async function () {
+      const { api, verifyAuthOrRedirect, wireHeader, exportCsv } = window.RolePortal;
+      const auth = await verifyAuthOrRedirect("security_officer");
+      if (!auth) return;
+      wireHeader("Security Officer");
+
+      let events = [];
+      try {
+        const ws = new WebSocket("ws://127.0.0.1:8000/ws/access-events");
+        ws.onmessage = (evt) => {
+          const line = evt.data;
+          document.getElementById("streamOut").textContent = `${line}\n` + document.getElementById("streamOut").textContent;
+        };
+      } catch (e) {
+        document.getElementById("streamOut").textContent = `WebSocket unavailable: ${e.message}`;
+      }
+
+      document.getElementById("failedBtn").addEventListener("click", async () => {
+        try {
+          const r = await api("/face-recognition/events");
+          events = await r.json();
+          const failed = events.filter((x) => String(x.result || "").toLowerCase().includes("fail"));
+          document.getElementById("failedOut").textContent = JSON.stringify(failed, null, 2);
+        } catch (e) {
+          document.getElementById("failedOut").textContent = e.message;
+        }
+      });
+
+      document.getElementById("exportEvents").addEventListener("click", () => {
+        const rows = [["id", "patient_uuid", "result", "captured_at"]];
+        for (const e of events) rows.push([e.id, e.patient_uuid, e.result, e.captured_at]);
+        exportCsv("security-events.csv", rows);
+      });
+    })();
+  </script>
+</body>
+</html>

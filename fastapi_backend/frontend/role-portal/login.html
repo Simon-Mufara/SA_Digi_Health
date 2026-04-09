@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Role Login</title>
+  <link rel="stylesheet" href="./shared.css" />
+</head>
+<body>
+  <div class="shell" style="max-width: 520px; padding-top: 2.4rem;">
+    <section class="card">
+      <h3>Secure Role Access</h3>
+      <p class="muted">Sign in with your assigned role to continue.</p>
+
+      <label for="staffId">Staff ID</label>
+      <input id="staffId" placeholder="e.g. doc100" />
+
+      <label for="password">Password</label>
+      <input id="password" type="password" placeholder="Password" />
+
+      <label for="role">Role</label>
+      <select id="role">
+        <option value="doctor">Doctor</option>
+        <option value="clinician">Clinician</option>
+        <option value="admin">Admin</option>
+        <option value="security_officer">Security Officer</option>
+        <option value="researcher">Researcher</option>
+      </select>
+
+      <button id="loginBtn" class="primary">Login</button>
+      <p id="status" class="muted"></p>
+    </section>
+  </div>
+
+  <script src="./shared.js"></script>
+  <script>
+    (async function () {
+      const { roleToPage, TOKEN_KEY, ROLE_KEY } = window.RolePortal;
+      const token = localStorage.getItem(TOKEN_KEY);
+      const role = localStorage.getItem(ROLE_KEY);
+      if (token && role) {
+        window.location.href = roleToPage(role);
+        return;
+      }
+
+      document.getElementById("loginBtn").addEventListener("click", async () => {
+        const staffId = document.getElementById("staffId").value.trim();
+        const password = document.getElementById("password").value;
+        const role = document.getElementById("role").value;
+        const status = document.getElementById("status");
+        status.textContent = "";
+
+        if (!staffId || !password || !role) {
+          status.textContent = "All fields are required.";
+          status.className = "error";
+          return;
+        }
+
+        try {
+          const body = new URLSearchParams();
+          body.set("username", staffId);
+          body.set("password", password);
+          body.set("scope", role);
+
+          const resp = await fetch("http://127.0.0.1:8000/api/v1/auth/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: body.toString(),
+          });
+
+          const payload = await resp.json().catch(() => ({}));
+          if (!resp.ok) throw new Error(payload.detail || `HTTP ${resp.status}`);
+
+          localStorage.setItem(TOKEN_KEY, payload.access_token);
+          localStorage.setItem(ROLE_KEY, role);
+          window.location.href = roleToPage(role);
+        } catch (e) {
+          status.textContent = e.message;
+          status.className = "error";
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,342 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PHDC Analytics Workspace</title>
+  <link rel="stylesheet" href="./shared.css" />
+  <style>
+    .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.2rem; text-align: center; }
+    .stat-card h4 { font-size: 0.85rem; color: var(--text-muted); margin: 0 0 0.5rem; text-transform: uppercase; letter-spacing: 0.05em; }
+    .stat-card .value { font-size: 2rem; font-weight: 700; color: var(--accent); }
+    .stat-card .sub { font-size: 0.8rem; color: var(--text-muted); margin-top: 0.3rem; }
+    .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+    .chart-box { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 1rem; min-height: 200px; }
+    .bar-chart { display: flex; align-items: flex-end; gap: 0.5rem; height: 180px; padding-top: 1rem; }
+    .bar { flex: 1; background: linear-gradient(to top, var(--accent), #20c997); border-radius: 4px 4px 0 0; transition: height 0.3s; position: relative; min-width: 40px; }
+    .bar:hover { opacity: 0.85; }
+    .bar .label { position: absolute; bottom: -22px; left: 50%; transform: translateX(-50%); font-size: 0.65rem; white-space: nowrap; color: var(--text-muted); }
+    .bar .count { position: absolute; top: -20px; left: 50%; transform: translateX(-50%); font-size: 0.7rem; font-weight: 600; color: var(--text); }
+    .quality-row { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+    .quality-badge { padding: 0.4rem 0.8rem; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
+    .quality-badge.low { background: rgba(40, 167, 69, 0.2); color: #28a745; }
+    .quality-badge.high { background: rgba(255, 193, 7, 0.2); color: #ffc107; }
+    .quality-badge.complete { background: rgba(16, 211, 197, 0.2); color: var(--accent); }
+    table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    th, td { padding: 0.6rem; text-align: left; border-bottom: 1px solid var(--border); }
+    th { color: var(--text-muted); font-weight: 600; text-transform: uppercase; font-size: 0.75rem; }
+    .export-btns { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+    .tab-nav { display: flex; gap: 0.5rem; margin-bottom: 1rem; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem; }
+    .tab-btn { padding: 0.5rem 1rem; border: none; background: none; color: var(--text-muted); cursor: pointer; border-radius: 6px; transition: all 0.2s; }
+    .tab-btn:hover { background: var(--surface); }
+    .tab-btn.active { background: var(--accent); color: var(--bg); font-weight: 600; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    .filter-row { display: flex; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 1rem; align-items: flex-end; }
+    .filter-row label { font-size: 0.8rem; color: var(--text-muted); }
+    .filter-row input, .filter-row select { padding: 0.5rem; border-radius: 6px; border: 1px solid var(--border); background: var(--surface); color: var(--text); }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <div class="topbar">
+      <h2>PHDC // Health Analytics Workspace</h2>
+      <div>
+        <span id="roleBadge" class="role-badge"></span>
+        <button id="logoutBtn" class="logout-btn">Logout</button>
+      </div>
+    </div>
+
+    <!-- Stats Overview -->
+    <section id="summarySection" class="stats-row"></section>
+
+    <!-- Tab Navigation -->
+    <nav class="tab-nav">
+      <button class="tab-btn active" data-tab="burden">Disease Burden</button>
+      <button class="tab-btn" data-tab="quality">Data Quality</button>
+      <button class="tab-btn" data-tab="cohort">Cohort Export</button>
+      <button class="tab-btn" data-tab="facility">Facility Stats</button>
+    </nav>
+
+    <!-- Disease Burden Tab -->
+    <div id="burden" class="tab-content active">
+      <section class="card">
+        <h3>Quadruple Burden Analysis</h3>
+        <p class="muted" style="margin-bottom:1rem;">Disease load distributed across age, gender, and geography aligned to PHDC framework.</p>
+        <div class="filter-row">
+          <div>
+            <label>Start Date</label><br>
+            <input type="date" id="burdenStart" />
+          </div>
+          <div>
+            <label>End Date</label><br>
+            <input type="date" id="burdenEnd" />
+          </div>
+          <button id="loadBurden" class="primary">Analyze</button>
+        </div>
+        <div class="grid" style="margin-top:1rem;">
+          <div class="chart-box">
+            <h4 style="margin:0 0 0.5rem;font-size:0.9rem;">Visits by Disease Group</h4>
+            <div id="diseaseChart" class="bar-chart"></div>
+          </div>
+          <div class="chart-box">
+            <h4 style="margin:0 0 0.5rem;font-size:0.9rem;">Disease Share (%)</h4>
+            <table id="diseaseTable"></table>
+          </div>
+        </div>
+        <div class="card" style="margin-top:1rem;">
+          <h4>Clinical Interpretation</h4>
+          <p id="interpretation" class="muted">Run the burden analysis to generate insights.</p>
+        </div>
+      </section>
+    </div>
+
+    <!-- Data Quality Tab -->
+    <div id="quality" class="tab-content">
+      <section class="card">
+        <h3>Data Quality Audit</h3>
+        <p class="muted" style="margin-bottom:1rem;">Missing values and completeness metrics per column.</p>
+        <button id="loadQuality" class="primary">Run Audit</button>
+        <div id="qualityResults" style="margin-top:1rem;"></div>
+      </section>
+    </div>
+
+    <!-- Cohort Export Tab -->
+    <div id="cohort" class="tab-content">
+      <section class="card">
+        <h3>De-identified Cohort Export</h3>
+        <p class="muted" style="margin-bottom:1rem;">Export research-ready datasets. PII fields are excluded for researcher role.</p>
+        <button id="loadCohort" class="primary">Load Cohort</button>
+        <div style="overflow:auto;margin-top:1rem;">
+          <table id="cohortTable"></table>
+        </div>
+        <div id="cohortStats" style="margin-top:1rem;"></div>
+        <div class="export-btns" style="margin-top:1rem;">
+          <button id="exportJson" class="secondary">Export JSON</button>
+          <button id="exportCsv" class="primary">Export CSV</button>
+        </div>
+      </section>
+    </div>
+
+    <!-- Facility Stats Tab -->
+    <div id="facility" class="tab-content">
+      <section class="card">
+        <h3>Facility & District Statistics</h3>
+        <button id="loadFacility" class="primary">Load Stats</button>
+        <div class="grid" style="margin-top:1rem;">
+          <div class="chart-box">
+            <h4 style="margin:0 0 0.5rem;font-size:0.9rem;">Monthly Visit Trend</h4>
+            <div id="monthlyChart" class="bar-chart"></div>
+          </div>
+          <div class="chart-box">
+            <h4 style="margin:0 0 0.5rem;font-size:0.9rem;">Visit Status Distribution</h4>
+            <table id="statusTable"></table>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script src="./shared.js"></script>
+  <script>
+    (async function () {
+      const { api, verifyAuthOrRedirect, wireHeader, exportCsv } = window.RolePortal;
+      const auth = await verifyAuthOrRedirect("researcher");
+      if (!auth) return;
+      wireHeader("Researcher");
+
+      // Tab switching
+      document.querySelectorAll(".tab-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+          document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+          document.querySelectorAll(".tab-content").forEach(c => c.classList.remove("active"));
+          btn.classList.add("active");
+          document.getElementById(btn.dataset.tab).classList.add("active");
+        });
+      });
+
+      let cohortData = [];
+
+      // Load Summary on page load
+      async function loadSummary() {
+        try {
+          const resp = await api("/analytics/summary");
+          const data = await resp.json();
+          document.getElementById("summarySection").innerHTML = `
+            <div class="stat-card">
+              <h4>Total Visits</h4>
+              <div class="value">${data.total_visits.toLocaleString()}</div>
+              <div class="sub">${data.date_range?.start?.split("T")[0] || "—"} to ${data.date_range?.end?.split("T")[0] || "—"}</div>
+            </div>
+            <div class="stat-card">
+              <h4>Unique Patients</h4>
+              <div class="value">${data.unique_patients.toLocaleString()}</div>
+              <div class="sub">${data.facilities_count} facilities</div>
+            </div>
+            <div class="stat-card">
+              <h4>Disease Groups</h4>
+              <div class="value">${data.disease_groups?.length || 8}</div>
+              <div class="sub">ICD-10 coded</div>
+            </div>
+            <div class="stat-card">
+              <h4>Districts</h4>
+              <div class="value">${data.districts?.length || 3}</div>
+              <div class="sub">WC municipalities</div>
+            </div>
+          `;
+        } catch (e) {
+          document.getElementById("summarySection").innerHTML = `<p class="muted">Could not load summary: ${e.message}</p>`;
+        }
+      }
+      loadSummary();
+
+      // Disease Burden Analysis
+      document.getElementById("loadBurden").addEventListener("click", async () => {
+        const start = document.getElementById("burdenStart").value;
+        const end = document.getElementById("burdenEnd").value;
+        let url = "/analytics/disease-burden";
+        const params = new URLSearchParams();
+        if (start) params.append("start_date", start);
+        if (end) params.append("end_date", end);
+        if (params.toString()) url += "?" + params.toString();
+
+        try {
+          const resp = await api(url);
+          const data = await resp.json();
+
+          // Render bar chart
+          const chartEl = document.getElementById("diseaseChart");
+          const maxCount = Math.max(...Object.values(data.disease_counts), 1);
+          chartEl.innerHTML = Object.entries(data.disease_counts)
+            .sort((a, b) => b[1] - a[1])
+            .map(([group, count]) => {
+              const pct = (count / maxCount) * 100;
+              return `<div class="bar" style="height:${pct}%"><span class="count">${count}</span><span class="label">${group}</span></div>`;
+            }).join("");
+
+          // Render table
+          const tableEl = document.getElementById("diseaseTable");
+          tableEl.innerHTML = `<tr><th>Disease Group</th><th>Count</th><th>Share %</th></tr>` +
+            Object.entries(data.disease_share_pct)
+              .sort((a, b) => b[1] - a[1])
+              .map(([g, pct]) => `<tr><td>${g}</td><td>${data.disease_counts[g]}</td><td>${pct}%</td></tr>`).join("");
+
+          // Clinical interpretation
+          const topDisease = Object.entries(data.disease_counts).sort((a, b) => b[1] - a[1])[0];
+          document.getElementById("interpretation").innerHTML = topDisease
+            ? `<strong>${topDisease[0]}</strong> accounts for <strong>${data.disease_share_pct[topDisease[0]]}%</strong> of visits (${topDisease[1]} total). ` +
+              `This is consistent with Western Cape disease burden patterns. ` +
+              `Total visits analyzed: <strong>${data.total_visits}</strong>.`
+            : "No data available for the selected period.";
+        } catch (e) {
+          document.getElementById("interpretation").textContent = "Error: " + e.message;
+        }
+      });
+
+      // Data Quality Audit
+      document.getElementById("loadQuality").addEventListener("click", async () => {
+        try {
+          const resp = await api("/analytics/data-quality");
+          const data = await resp.json();
+
+          let html = `<p><strong>Patients:</strong> ${data.total_patients} | <strong>Visits:</strong> ${data.total_visits}</p>`;
+          html += `<h4 style="margin-top:1rem;">Patient Completeness</h4><div class="quality-row">`;
+          for (const [field, info] of Object.entries(data.patient_completeness)) {
+            const cls = info.pct_missing === 0 ? "complete" : info.severity;
+            html += `<span class="quality-badge ${cls}">${field}: ${info.pct_missing}% missing (${info.null_count})</span>`;
+          }
+          html += `</div>`;
+
+          html += `<h4 style="margin-top:1rem;">Visit Completeness</h4><div class="quality-row">`;
+          for (const [field, info] of Object.entries(data.visit_completeness)) {
+            const cls = info.pct_missing === 0 ? "complete" : info.severity;
+            html += `<span class="quality-badge ${cls}">${field}: ${info.pct_missing}% missing (${info.null_count})</span>`;
+          }
+          html += `</div>`;
+
+          if (data.recommendations?.filter(r => r).length) {
+            html += `<h4 style="margin-top:1rem;">Recommendations</h4><ul>`;
+            for (const rec of data.recommendations.filter(r => r)) {
+              html += `<li>${rec}</li>`;
+            }
+            html += `</ul>`;
+          }
+
+          document.getElementById("qualityResults").innerHTML = html;
+        } catch (e) {
+          document.getElementById("qualityResults").innerHTML = `<p class="muted">Error: ${e.message}</p>`;
+        }
+      });
+
+      // Cohort Export
+      document.getElementById("loadCohort").addEventListener("click", async () => {
+        try {
+          const resp = await api("/analytics/cohort-export?format=json");
+          const result = await resp.json();
+          cohortData = result.data || [];
+
+          const tableEl = document.getElementById("cohortTable");
+          if (cohortData.length === 0) {
+            tableEl.innerHTML = "<tr><td>No records found</td></tr>";
+            return;
+          }
+          const cols = Object.keys(cohortData[0]);
+          tableEl.innerHTML = `<tr>${cols.map(c => `<th>${c}</th>`).join("")}</tr>` +
+            cohortData.slice(0, 50).map(row => `<tr>${cols.map(c => `<td>${row[c] ?? ""}</td>`).join("")}</tr>`).join("");
+
+          document.getElementById("cohortStats").innerHTML = `
+            <p class="muted">Showing ${Math.min(50, cohortData.length)} of ${result.record_count} records. PII excluded.</p>
+          `;
+        } catch (e) {
+          document.getElementById("cohortTable").innerHTML = `<tr><td>Error: ${e.message}</td></tr>`;
+        }
+      });
+
+      document.getElementById("exportJson").addEventListener("click", () => {
+        if (!cohortData.length) return alert("Load cohort first");
+        const blob = new Blob([JSON.stringify(cohortData, null, 2)], { type: "application/json" });
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = "cohort_export.json";
+        a.click();
+      });
+
+      document.getElementById("exportCsv").addEventListener("click", async () => {
+        try {
+          const resp = await api("/analytics/cohort-export?format=csv");
+          const blob = await resp.blob();
+          const a = document.createElement("a");
+          a.href = URL.createObjectURL(blob);
+          a.download = "cohort_export.csv";
+          a.click();
+        } catch (e) {
+          alert("Export failed: " + e.message);
+        }
+      });
+
+      // Facility Stats
+      document.getElementById("loadFacility").addEventListener("click", async () => {
+        try {
+          const resp = await api("/analytics/facility-stats");
+          const data = await resp.json();
+
+          // Monthly chart
+          const monthlyEl = document.getElementById("monthlyChart");
+          const maxVisits = Math.max(...data.monthly_visits.map(m => m.count), 1);
+          monthlyEl.innerHTML = data.monthly_visits.map(m => {
+            const pct = (m.count / maxVisits) * 100;
+            return `<div class="bar" style="height:${pct}%"><span class="count">${m.count}</span><span class="label">${m.month}</span></div>`;
+          }).join("");
+
+          // Status table
+          const statusEl = document.getElementById("statusTable");
+          statusEl.innerHTML = `<tr><th>Status</th><th>Count</th></tr>` +
+            Object.entries(data.status_distribution).map(([s, c]) => `<tr><td>${s}</td><td>${c}</td></tr>`).join("");
+        } catch (e) {
+          document.getElementById("monthlyChart").innerHTML = `<p class="muted">Error: ${e.message}</p>`;
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

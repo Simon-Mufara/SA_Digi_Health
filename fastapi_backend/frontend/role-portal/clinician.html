@@ -1,0 +1,346 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Clinician Check-in</title>
+  <link rel="stylesheet" href="./shared.css" />
+  <style>
+    .banner { border: 1px solid var(--accent); background: rgba(16, 211, 197, 0.12); border-radius: 10px; padding: 0.6rem; margin-bottom: 0.7rem; }
+    .banner.warning { border-color: #ffc107; background: rgba(255, 193, 7, 0.1); }
+    .inline-error { font-size: 0.88rem; margin: -0.35rem 0 0.45rem; color: var(--danger); }
+    .camera-box { border: 1px solid var(--border); border-radius: 10px; padding: 0.6rem; }
+    video, img { width: 100%; border-radius: 8px; border: 1px solid var(--border); background: #050b17; }
+    .field-group { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+    .field-group.single { grid-template-columns: 1fr; }
+    .required-label::after { content: " *"; color: var(--danger); }
+    .vitals-row { display: flex; gap: 0.5rem; }
+    .vitals-row input { flex: 1; }
+    .step-indicator { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
+    .step { padding: 0.4rem 0.8rem; border-radius: 20px; font-size: 0.8rem; background: var(--surface); border: 1px solid var(--border); }
+    .step.active { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+    .step.done { background: rgba(40, 167, 69, 0.2); color: #28a745; border-color: #28a745; }
+    .section-header { font-size: 0.85rem; color: var(--accent); text-transform: uppercase; letter-spacing: 0.05em; margin: 1rem 0 0.5rem; border-bottom: 1px solid var(--border); padding-bottom: 0.3rem; }
+    .success-msg { background: rgba(40, 167, 69, 0.1); border: 1px solid #28a745; color: #28a745; padding: 0.75rem; border-radius: 8px; margin-top: 0.5rem; }
+    .district-select, .facility-select { width: 100%; }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <div class="topbar">
+      <h2>Clinician Intake + Biometric Check-in</h2>
+      <div>
+        <span id="roleBadge" class="role-badge"></span>
+        <button id="logoutBtn" class="logout-btn">Logout</button>
+      </div>
+    </div>
+
+    <div class="step-indicator">
+      <span class="step active" id="step1">1. Face Capture</span>
+      <span class="step" id="step2">2. Demographics</span>
+      <span class="step" id="step3">3. Visit Details</span>
+    </div>
+
+    <section id="returningBanner" class="banner" style="display:none;"></section>
+
+    <div class="grid">
+      <!-- Face Capture Section -->
+      <section class="card">
+        <h3>Face Capture</h3>
+        <div class="camera-box">
+          <div style="display:flex;gap:0.5rem;margin-bottom:0.5rem;">
+            <button id="startCam" class="primary">Start Camera</button>
+            <button id="captureCam" class="secondary">Capture Frame</button>
+          </div>
+          <video id="video" autoplay playsinline muted></video>
+          <canvas id="canvas" style="display:none;"></canvas>
+        </div>
+        <label style="margin-top:0.5rem;display:block;">Fallback Upload</label>
+        <input id="faceFile" type="file" accept="image/*" />
+        <img id="preview" alt="preview" style="display:none;margin-top:0.5rem;" />
+        <div id="cameraErr" class="inline-error"></div>
+      </section>
+
+      <!-- Patient Demographics Section -->
+      <section class="card">
+        <h3>Patient Demographics</h3>
+        
+        <div class="section-header">Basic Information</div>
+        <div class="field-group">
+          <div>
+            <label>Full Name</label>
+            <input id="name" placeholder="Patient full name" />
+          </div>
+          <div>
+            <label>South African ID</label>
+            <input id="identifier" placeholder="13-digit SA ID" maxlength="13" />
+          </div>
+        </div>
+        
+        <div class="field-group">
+          <div>
+            <label class="required-label">Gender</label>
+            <select id="gender">
+              <option value="">Select gender</option>
+              <option value="F">Female</option>
+              <option value="M">Male</option>
+              <option value="Other">Other</option>
+              <option value="Unknown">Unknown</option>
+            </select>
+          </div>
+          <div>
+            <label>Age (years)</label>
+            <input id="age" type="number" min="0" max="120" placeholder="Age" />
+          </div>
+        </div>
+
+        <div class="section-header">Location</div>
+        <div class="field-group">
+          <div>
+            <label>District</label>
+            <select id="district" class="district-select">
+              <option value="">Select district</option>
+              <option value="City of Cape Town">City of Cape Town</option>
+              <option value="Cape Winelands">Cape Winelands</option>
+              <option value="Garden Route">Garden Route</option>
+              <option value="West Coast">West Coast</option>
+              <option value="Overberg">Overberg</option>
+              <option value="Central Karoo">Central Karoo</option>
+            </select>
+          </div>
+          <div>
+            <label>Facility</label>
+            <select id="facility" class="facility-select">
+              <option value="">Select facility</option>
+              <option value="Khayelitsha CHC">Khayelitsha CHC</option>
+              <option value="Mitchell's Plain CDC">Mitchell's Plain CDC</option>
+              <option value="Gugulethu CHC">Gugulethu CHC</option>
+              <option value="Stellenbosch Clinic">Stellenbosch Clinic</option>
+              <option value="Paarl East Clinic">Paarl East Clinic</option>
+              <option value="Worcester Hospital">Worcester Hospital</option>
+              <option value="George Hospital">George Hospital</option>
+              <option value="Mossel Bay Clinic">Mossel Bay Clinic</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="section-header">Visit Information</div>
+        <div class="field-group single">
+          <div>
+            <label class="required-label">Visit Reason</label>
+            <input id="visitReason" placeholder="e.g. check-up, prenatal, chronic care" />
+          </div>
+        </div>
+        
+        <div class="field-group">
+          <div>
+            <label>ICD-10 Code (optional)</label>
+            <input id="icd10" placeholder="e.g. I10, E11, J18.9" />
+          </div>
+          <div>
+            <label>Disease Group</label>
+            <select id="diseaseGroup">
+              <option value="">Auto-detect from ICD-10</option>
+              <option value="NCD">NCD (Chronic)</option>
+              <option value="ALRI">ALRI (Respiratory)</option>
+              <option value="HIV">HIV</option>
+              <option value="TB">TB</option>
+              <option value="Maternal">Maternal</option>
+              <option value="Injury">Injury</option>
+              <option value="Mental Health">Mental Health</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="section-header">Optional Vitals</div>
+        <div class="vitals-row">
+          <div>
+            <label>BMI</label>
+            <input id="bmi" type="number" step="0.1" min="10" max="60" placeholder="BMI" />
+          </div>
+          <div>
+            <label>Systolic BP</label>
+            <input id="systolicBp" type="number" min="60" max="250" placeholder="mmHg" />
+          </div>
+          <div>
+            <label>Diastolic BP</label>
+            <input id="diastolicBp" type="number" min="40" max="150" placeholder="mmHg" />
+          </div>
+        </div>
+
+        <button id="submitCheckin" class="primary" style="margin-top:1rem;width:100%;">Submit Check-in</button>
+        <div id="formErr" class="inline-error"></div>
+      </section>
+    </div>
+
+    <section class="card">
+      <h3>Check-in Result</h3>
+      <pre id="resultOut" class="muted"></pre>
+    </section>
+  </div>
+
+  <script src="./shared.js"></script>
+  <script>
+    (async function () {
+      const { api, verifyAuthOrRedirect, wireHeader } = window.RolePortal;
+      const auth = await verifyAuthOrRedirect("clinician");
+      if (!auth) return;
+      wireHeader("Clinician");
+
+      const video = document.getElementById("video");
+      const canvas = document.getElementById("canvas");
+      const preview = document.getElementById("preview");
+      const faceFileInput = document.getElementById("faceFile");
+      const cameraErr = document.getElementById("cameraErr");
+      const formErr = document.getElementById("formErr");
+      const resultOut = document.getElementById("resultOut");
+      const returningBanner = document.getElementById("returningBanner");
+      let stream = null;
+      let capturedFile = null;
+
+      function showInlineError(target, msg) { target.textContent = msg || ""; }
+      function updateStep(num) {
+        document.querySelectorAll(".step").forEach((s, i) => {
+          s.classList.remove("active", "done");
+          if (i + 1 < num) s.classList.add("done");
+          if (i + 1 === num) s.classList.add("active");
+        });
+      }
+
+      // Auto-map district to facilities
+      const facilityMap = {
+        "City of Cape Town": ["Khayelitsha CHC", "Mitchell's Plain CDC", "Gugulethu CHC"],
+        "Cape Winelands": ["Stellenbosch Clinic", "Paarl East Clinic", "Worcester Hospital"],
+        "Garden Route": ["George Hospital", "Mossel Bay Clinic"],
+      };
+      
+      document.getElementById("district").addEventListener("change", (e) => {
+        const facilities = facilityMap[e.target.value] || [];
+        const facilitySelect = document.getElementById("facility");
+        facilitySelect.innerHTML = '<option value="">Select facility</option>' +
+          facilities.map(f => `<option value="${f}">${f}</option>`).join("");
+      });
+
+      // SA ID validation - extract age/gender if possible
+      document.getElementById("identifier").addEventListener("blur", (e) => {
+        const id = e.target.value.trim();
+        if (id.length === 13 && /^\d{13}$/.test(id)) {
+          // Extract birthdate from SA ID (YYMMDD)
+          const yy = parseInt(id.substring(0, 2));
+          const mm = parseInt(id.substring(2, 4));
+          const dd = parseInt(id.substring(4, 6));
+          const genderDigit = parseInt(id.substring(6, 10));
+          
+          // Determine century
+          const currentYear = new Date().getFullYear() % 100;
+          const century = yy <= currentYear ? 2000 : 1900;
+          const birthYear = century + yy;
+          const age = new Date().getFullYear() - birthYear;
+          
+          // Set age if valid
+          if (age >= 0 && age <= 120 && mm >= 1 && mm <= 12 && dd >= 1 && dd <= 31) {
+            document.getElementById("age").value = age;
+          }
+          
+          // Set gender (0000-4999 = Female, 5000-9999 = Male)
+          if (!document.getElementById("gender").value) {
+            document.getElementById("gender").value = genderDigit < 5000 ? "F" : "M";
+          }
+        }
+      });
+
+      document.getElementById("startCam").addEventListener("click", async () => {
+        showInlineError(cameraErr, "");
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+          video.srcObject = stream;
+          updateStep(1);
+        } catch {
+          showInlineError(cameraErr, "Camera permission denied.");
+        }
+      });
+
+      document.getElementById("captureCam").addEventListener("click", () => {
+        showInlineError(cameraErr, "");
+        if (!video.videoWidth || !video.videoHeight) {
+          showInlineError(cameraErr, "Camera feed unavailable.");
+          return;
+        }
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        canvas.toBlob((blob) => {
+          if (!blob) return showInlineError(cameraErr, "Could not capture image.");
+          capturedFile = new File([blob], "captured.jpg", { type: "image/jpeg" });
+          preview.src = URL.createObjectURL(capturedFile);
+          preview.style.display = "block";
+          updateStep(2);
+        }, "image/jpeg", 0.95);
+      });
+
+      faceFileInput.addEventListener("change", (e) => {
+        const f = e.target.files?.[0] || null;
+        if (!f) return;
+        capturedFile = f;
+        preview.src = URL.createObjectURL(f);
+        preview.style.display = "block";
+        updateStep(2);
+      });
+
+      document.getElementById("submitCheckin").addEventListener("click", async () => {
+        showInlineError(formErr, "");
+        showInlineError(cameraErr, "");
+        returningBanner.style.display = "none";
+        resultOut.textContent = "";
+
+        const gender = document.getElementById("gender").value;
+        const visitReason = document.getElementById("visitReason").value.trim();
+        const identifier = document.getElementById("identifier").value.trim();
+
+        if (!capturedFile) return showInlineError(cameraErr, "Please capture or upload a face image.");
+        if (!gender) return showInlineError(formErr, "Gender is required.");
+        if (!visitReason) return showInlineError(formErr, "Visit reason is required.");
+        if (identifier && !/^\d{13}$/.test(identifier)) return showInlineError(formErr, "SA ID must be exactly 13 digits.");
+
+        updateStep(3);
+
+        const fd = new FormData();
+        fd.append("face_image", capturedFile);
+        fd.append("name", document.getElementById("name").value.trim());
+        fd.append("identifier", identifier);
+        fd.append("gender", gender);
+        fd.append("visit_reason", visitReason);
+
+        try {
+          const resp = await api("/patients/checkin", { method: "POST", body: fd });
+          const data = await resp.json();
+
+          if (data.returning_patient) {
+            returningBanner.innerHTML = `<strong>✓ Returning Patient</strong>: ${data.patient_name || data.patient_uuid} (confidence: ${(data.confidence * 100).toFixed(1)}%)`;
+            returningBanner.className = "banner";
+            returningBanner.style.display = "block";
+            document.getElementById("name").value = data.patient_name || document.getElementById("name").value;
+            document.getElementById("identifier").value = data.masked_identifier || document.getElementById("identifier").value;
+            document.getElementById("gender").value = data.gender || gender;
+          } else {
+            returningBanner.innerHTML = `<strong>+ New Patient Registered</strong>: ${data.patient_name || "Anonymous"} (UUID: ${data.patient_uuid.substring(0, 8)}...)`;
+            returningBanner.className = "banner";
+            returningBanner.style.display = "block";
+          }
+
+          resultOut.innerHTML = `<div class="success-msg">Check-in successful! Session ID: ${data.visit_session_id}</div>` +
+            `<pre style="margin-top:0.5rem;">${JSON.stringify(data, null, 2)}</pre>`;
+        } catch (e) {
+          const msg = String(e.message || "");
+          if (msg.toLowerCase().includes("no face")) return showInlineError(cameraErr, "No face detected in image.");
+          if (msg.toLowerCase().includes("duplicate identifier")) return showInlineError(formErr, "Duplicate identifier conflict.");
+          if (msg.toLowerCase().includes("network") || msg.toLowerCase().includes("failed to fetch")) return showInlineError(formErr, "Network error. Could not reach backend.");
+          showInlineError(formErr, msg);
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

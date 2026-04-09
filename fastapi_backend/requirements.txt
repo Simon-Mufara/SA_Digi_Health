@@ -1,0 +1,15 @@
+fastapi==0.115.5
+uvicorn[standard]==0.32.1
+sqlalchemy==2.0.36
+psycopg2-binary==2.9.10
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+python-multipart==0.0.17
+pydantic-settings==2.7.0
+cryptography==44.0.1
+alembic==1.14.1
+numpy==2.2.3
+faiss-cpu==1.10.0
+pinecone==6.0.2
+deepface==0.0.93
+opencv-python-headless==4.10.0.84

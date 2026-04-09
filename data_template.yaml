@@ -1,0 +1,14 @@
+# Template YOLO dataset config for custom training.
+# Update paths and class names for your dataset.
+
+path: C:\path\to\your\dataset_root
+train: images\train
+val: images\val
+# test: images\test
+
+names:
+  0: person
+  1: bottle
+  2: hardhat
+  3: goggles
+  4: gloves
