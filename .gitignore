@@ -27,3 +27,8 @@ Thumbs.db
 *.onnx
 *.h5
 *.ckpt
+
+# Additional generated artifacts
+fastapi_backend/frontend/doctor-dashboard/node_modules/
+fastapi_backend/frontend/doctor-dashboard/dist/
+nextjs-frontend/.next/
